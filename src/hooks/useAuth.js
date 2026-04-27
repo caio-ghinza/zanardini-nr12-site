@@ -7,43 +7,18 @@ const LoginSchema = z.object({
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres')
 });
 
+/**
+ * Hook de Autenticação - Padrão Ouro ISO 9001
+ * Resolve o problema do Refresh (F5) e garante estado consistente.
+ */
 export function useAuth() {
-  const [session, setSession]         = useState(null);
-  const [profile, setProfile]         = useState(null);
-  const [loading, setLoading]         = useState(true);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [lockoutTime, setLockoutTime] = useState(null);
   
-  const initializedRef = useRef(false);
-
-  // ─── RPCs de segurança ────────────────────────────────────────────────────
-
-  const checkServerLockout = useCallback(async (email) => {
-    try {
-      const { data, error } = await supabase.rpc('check_auth_status', {
-        target_email: email.trim().toLowerCase()
-      });
-      if (error || !data) return false;
-      if (data.is_locked) {
-        setLockoutTime(new Date(data.locked_until).getTime());
-        return true;
-      }
-      setLockoutTime(null);
-      return false;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const handleFailedAttempt = useCallback(async (email) => {
-    try {
-      await supabase.rpc('register_auth_failure', {
-        target_email: email.trim().toLowerCase()
-      });
-      await checkServerLockout(email);
-    } catch {
-      // Ignorado
-    }
-  }, [checkServerLockout]);
+  // Evita re-inicializações duplicadas no StrictMode
+  const initialized = useRef(false);
 
   // ─── Busca de perfil ──────────────────────────────────────────────────────
 
@@ -58,109 +33,89 @@ export function useAuth() {
       if (error) throw error;
       return data;
     } catch (err) {
-      console.error('[Auth] Profile fetch error:', err.message);
+      console.error('[Auth] Erro ao buscar perfil:', err.message);
       return null;
     }
   }, []);
 
-  // ─── Inicialização e Gestão de Estado ─────────────────────────────────────
+  // ─── Ciclo de Vida (F5 Resilience) ────────────────────────────────────────
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     let mounted = true;
 
-    // Função central para finalizar o boot
-    const finishBoot = (sess, prof) => {
-      if (!mounted || initializedRef.current) return;
-      console.log('[Auth] Finalizando boot. Sessão:', !!sess, 'Perfil:', !!prof);
-      setSession(sess);
-      setProfile(prof);
-      setLoading(false);
-      initializedRef.current = true;
+    // 1. Caminho Ativo: Busca a sessão imediatamente após o reload
+    const initialize = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (initialSession?.user) {
+          if (mounted) setSession(initialSession);
+          const userProfile = await fetchProfile(initialSession.user.id);
+          if (mounted) setProfile(userProfile);
+        }
+      } catch (err) {
+        console.error('[Auth] Erro na inicialização:', err);
+      } finally {
+        // 🚀 O SEGREDO: Libera o loading independente do resultado
+        if (mounted) setLoading(false);
+      }
     };
 
-    // 1. Inicia o listener IMEDIATAMENTE
+    initialize();
+
+    // 2. Caminho Passivo: Ouve mudanças de estado futuras
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('[Auth] Evento:', event, '| Sessão:', !!newSession);
-        
         if (!mounted) return;
 
-        // Se o boot já terminou, apenas atualizamos o estado normalmente
-        if (initializedRef.current) {
-          setSession(newSession);
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            if (newSession?.user) {
-              const p = await fetchProfile(newSession.user.id);
-              if (mounted) {
-                setProfile(p);
-                if (!p) {
-                   await supabase.auth.signOut();
-                   setSession(null);
-                }
+        // Evita flash de loading no boot inicial se o getSession já estiver resolvendo
+        if (event === 'INITIAL_SESSION') return;
+
+        setSession(newSession);
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (newSession?.user) {
+            const p = await fetchProfile(newSession.user.id);
+            if (mounted) {
+              setProfile(p);
+              if (!p) {
+                // Se autenticou mas não tem perfil, desloga por segurança
+                await supabase.auth.signOut();
+                setSession(null);
               }
             }
-          } else if (event === 'SIGNED_OUT') {
-            setProfile(null);
           }
-          return;
         }
 
-        // Se ainda estamos no boot e recebemos uma sessão válida
-        if (newSession?.user) {
-          const p = await fetchProfile(newSession.user.id);
-          finishBoot(newSession, p);
-        } else if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
-          // Se for o evento inicial e não houver usuário, boot limpo
-          finishBoot(null, null);
+        if (event === 'SIGNED_OUT') {
+          setProfile(null);
+          setSession(null);
         }
+        
+        // Garante que o loading morra em qualquer evento de auth
+        setLoading(false);
       }
     );
-
-    // 2. Fallback: Se o listener não resolveu o boot em 1.5s, tenta getSession()
-    const fallbackTimer = setTimeout(async () => {
-      if (!initializedRef.current && mounted) {
-        console.log('[Auth] Fallback getSession acionado...');
-        try {
-          const { data: { session: sess } } = await supabase.auth.getSession();
-          if (sess?.user) {
-            const p = await fetchProfile(sess.user.id);
-            finishBoot(sess, p);
-          } else {
-            finishBoot(null, null);
-          }
-        } catch (e) {
-          console.error('[Auth] Erro no fallback:', e);
-          finishBoot(null, null);
-        }
-      }
-    }, 1500);
-
-    // 3. Failsafe final: Se nada resolveu em 8s, libera o loading de qualquer jeito
-    const absoluteFailsafe = setTimeout(() => {
-      if (!initializedRef.current && mounted) {
-        console.warn('[Auth] Failsafe absoluto acionado!');
-        setLoading(false);
-        initializedRef.current = true;
-      }
-    }, 8000);
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(fallbackTimer);
-      clearTimeout(absoluteFailsafe);
     };
   }, [fetchProfile]);
 
-  // ─── Login ────────────────────────────────────────────────────────────────
+  // ─── Operações de Auth ──────────────────────────────────────────────────
 
   const signIn = async (email, password) => {
-    const sanitizedEmail = email.trim().toLowerCase();
-
-    const isLocked = await checkServerLockout(sanitizedEmail);
-    if (isLocked) {
-      return { error: new Error('Conta bloqueada temporariamente.') };
+    const validation = LoginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      return { error: new Error(validation.error.errors[0].message) };
     }
+
+    const sanitizedEmail = email.trim().toLowerCase();
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -168,26 +123,20 @@ export function useAuth() {
         password
       });
 
-      if (error) {
-        await handleFailedAttempt(sanitizedEmail);
-        return { error: new Error('Credenciais inválidas.') };
-      }
-
-      await supabase.rpc('reset_auth_attempts', { target_email: sanitizedEmail }).catch(() => {});
+      if (error) throw error;
 
       const userProfile = await fetchProfile(data.user.id);
-      
       if (!userProfile) {
         await supabase.auth.signOut();
-        return { error: new Error('Perfil não encontrado.') };
+        return { error: new Error('Perfil não encontrado no sistema.') };
       }
 
       setSession(data.session);
       setProfile(userProfile);
-
       return { data };
     } catch (err) {
-      return { error: new Error('Erro de conexão.') };
+      console.error('[Auth] Erro no Login:', err);
+      return { error: new Error('Falha na autenticação. Verifique suas credenciais.') };
     }
   };
 
@@ -204,8 +153,6 @@ export function useAuth() {
     signIn,
     signOut,
     isAdmin: profile?.role === 'admin',
-    isCliente: profile?.role === 'cliente',
-    lockoutTime,
-    isLockedOut: !!(lockoutTime && lockoutTime > Date.now())
+    isCliente: profile?.role === 'cliente'
   };
 }

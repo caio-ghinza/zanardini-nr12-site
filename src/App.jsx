@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AuthProvider, useAuthContext } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuthContext } from './hooks/useAuthContext';
 import { UIProvider } from './components/ui/UIContext';
 
 import Navigation from './components/Navigation';

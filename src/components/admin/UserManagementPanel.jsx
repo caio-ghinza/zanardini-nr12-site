@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Users, UserPlus, Shield, ShieldOff, KeyRound, CheckCircle2, XCircle } from 'lucide-react';
 import AdminOnly from './AdminOnly';
 import { useAdminUsers } from '../../hooks/useAdminUsers';
-import { useAuthContext } from '../../contexts/AuthContext';
+import { useAuthContext } from '../../hooks/useAuthContext';
 import { supabase } from '../../supabase';
 
 export default function UserManagementPanel() {

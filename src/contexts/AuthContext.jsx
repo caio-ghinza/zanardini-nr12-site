@@ -1,7 +1,7 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const auth = useAuth();
@@ -11,12 +11,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuthContext() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuthContext deve ser usado dentro de um AuthProvider');
-  }
-  return context;
 }

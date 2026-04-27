@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthContext } from '../contexts/AuthContext';
+import { useAuthContext } from '../hooks/useAuthContext';
 import { Shield, Lock, User, ArrowRight, Loader2, AlertCircle, Clock } from 'lucide-react';
 
 export default function LoginScreen() {
