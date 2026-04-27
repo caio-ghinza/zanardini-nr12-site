@@ -1,0 +1,108 @@
+{
+  "machines": [
+    {
+      "name": "Sopradora DKB6L",
+      "manufacturer": "SUPER Machinery / 今隽机械",
+      "model": "DKB6L",
+      "machine_type": "sopradora",
+      "sector": "Setor de Termoplásticos",
+      "risk_level": "extremo",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "CLP MicroLogix monitorando porta de segurança",
+      "action_required": "Instalar Pilz PNOZ X3 + válvulas hidráulicas duplas monitoradas",
+      "compliance_pct": 15,
+      "status": "pendente"
+    },
+    {
+      "name": "Sopradora SPB65D",
+      "manufacturer": "SUPER Machinery / 今隽机械",
+      "model": "SPB65D",
+      "machine_type": "sopradora",
+      "sector": "Setor de Termoplásticos",
+      "risk_level": "extremo",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "Mesma arquitetura de CLP + ausência de manual elétrico",
+      "action_required": "Reengenharia elétrica completa após recebimento de As-Builts",
+      "compliance_pct": 10,
+      "status": "pendente"
+    },
+    {
+      "name": "Prensa Mecânica GTX 250T",
+      "manufacturer": "Chin Fong",
+      "model": "GTX 250T",
+      "machine_type": "prensa_mecanica",
+      "sector": "Estamparia Pesada",
+      "risk_level": "alto",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "Cortina de luz classificada como opcional no manual",
+      "action_required": "Instalar cortina Tipo 4 + enclausuramento trifacial + calço QDC",
+      "compliance_pct": 30,
+      "status": "em_progresso"
+    },
+    {
+      "name": "Prensa Mecânica OCP-E",
+      "manufacturer": "Chin Fong",
+      "model": "OCP-E",
+      "machine_type": "prensa_mecanica",
+      "sector": "Estamparia Leve",
+      "risk_level": "alto",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "Proteções vendidas como opcionais; validar freio úmido",
+      "action_required": "Instalar grade + cortina + medir Ts com Stop Time Analyzer",
+      "compliance_pct": 35,
+      "status": "em_progresso"
+    },
+    {
+      "name": "Prensa Mecânica SEYI",
+      "manufacturer": "Shieh Yih Machinery",
+      "model": "OCP-80",
+      "machine_type": "prensa_mecanica",
+      "sector": "Estamparia Média",
+      "risk_level": "alto",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "Integração robô via jumpers nos bimanuais (violação ISO 10218-2)",
+      "action_required": "Reconectar via pinos X7/Xb com Relé Cat.3",
+      "compliance_pct": 20,
+      "status": "pendente"
+    },
+    {
+      "name": "Prensa Viradeira CNC",
+      "manufacturer": "Fabricante sob-medida",
+      "model": "CNC-50",
+      "machine_type": "dobradeira",
+      "sector": "Solda e Montagem",
+      "risk_level": "alto",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "Sem laser de segurança; pedal não certificado Categoria 3",
+      "action_required": "Instalar Fiessler AKAS II + pedal 3 posições Schmersal",
+      "compliance_pct": 10,
+      "status": "pendente"
+    },
+    {
+      "name": "Prensa Hidráulica 4 Colunas",
+      "manufacturer": "Fabricante chinês",
+      "model": "HDP-100",
+      "machine_type": "prensa_hidraulica",
+      "sector": "Prensagem Especial",
+      "risk_level": "alto",
+      "plr_required": "PLe / Categoria 4",
+      "anomaly": "Sem válvulas de retenção anti-queda; sem calço mecânico",
+      "action_required": "Reestruturar manifold + instalar válvulas cartucho duplas + calço",
+      "compliance_pct": 10,
+      "status": "pendente"
+    },
+    {
+      "name": "Célula Robótica Jifu MD10",
+      "manufacturer": "Zhejiang Jifu",
+      "model": "MD10",
+      "machine_type": "robo",
+      "sector": "Célula de Inspeção",
+      "risk_level": "alto",
+      "plr_required": "PLd / Categ. 3",
+      "anomaly": "Cercamento perimetral não confirmado; parada emergência via pendant",
+      "action_required": "Instalar Scanner SICK MicroScan3 + cerco 1800mm + E-Stop Cat.0",
+      "compliance_pct": 10,
+      "status": "pendente"
+    }
+  ]
+}

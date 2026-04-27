@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.log
+
+# locks (geralmente ruído)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# assets pesados (se existirem)
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.mp4
+**/*.pdf
+
+# segredos
+.env
