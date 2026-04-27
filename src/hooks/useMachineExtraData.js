@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../supabase';
 import { analyzeNR12Document } from '../services/aiService';
+import { useUI } from '../components/ui/UIContext';
 
 /**
  * Hook para gerenciar dados secundários de uma máquina (Docs, Ações, Imagens).
@@ -9,6 +10,7 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
   const [extraData, setExtraData] = useState({ documents: [], parts: [], images: [], gaps: [] });
   const [analyzingDocId, setAnalyzingDocId] = useState(null);
   const [batchProgress, setBatchProgress] = useState(null);
+  const { addToast } = useUI();
 
   const fetchExtraData = useCallback(async (machineId) => {
     if (!machineId) return;
@@ -102,11 +104,12 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
 
       // Atualiza o estado local para refletir as mudanças imediatamente
       await fetchExtraData(doc.machine_id);
+      addToast(`Análise concluída: ${doc.title}`, 'success');
       
       return result;
     } catch (err) {
       console.error('Falha na análise de IA:', err);
-      alert(`Não foi possível analisar o documento "${doc.title}". Verifique sua conexão ou chave de API.`);
+      addToast(`Não foi possível analisar o documento "${doc.title}".`, 'error');
       throw err;
     } finally {
       setAnalyzingDocId(null);
@@ -124,7 +127,7 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
       .is('ai_analyzed_at', null);
 
     if (!pendingDocs || pendingDocs.length === 0) {
-      alert('Nenhum documento pendente de análise.');
+      addToast('Nenhum documento pendente de análise.', 'info');
       return;
     }
 
@@ -146,8 +149,9 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
     }
 
     setBatchProgress(null);
-    alert('Análise em lote concluída!');
+    addToast('Análise em lote concluída!', 'success');
   }
+
 
   async function setAsCover(url) {
     if (!selectedMachine) return;

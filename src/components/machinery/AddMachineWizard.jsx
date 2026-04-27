@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, ShieldCheck } from 'lucide-react';
-import { supabase } from '../../supabase';
+import { useUI } from '../ui/UIContext';
 
-export default function AddMachineWizard({ isOpen, onClose, onRefresh }) {
+export default function AddMachineWizard({ isOpen, onClose, onCreateMachine }) {
+  const { addToast } = useUI();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
@@ -16,24 +17,23 @@ export default function AddMachineWizard({ isOpen, onClose, onRefresh }) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('machines')
-        .insert([{
-          ...formData,
-          compliance_pct: 0,
-          status: 'pendente'
-        }]);
+      const { error } = await onCreateMachine({
+        ...formData,
+        compliance_pct: 0,
+        status: 'pendente'
+      });
 
       if (error) throw error;
-      onRefresh();
+      addToast('Máquina cadastrada com sucesso!', 'success');
       onClose();
     } catch (err) {
       console.error('Error saving machine:', err);
-      alert('Erro ao salvar no Supabase.');
+      addToast('Erro ao salvar no Supabase.', 'error');
     } finally {
       setIsSaving(false);
     }
   };
+
   
   if (!isOpen) return null;
 

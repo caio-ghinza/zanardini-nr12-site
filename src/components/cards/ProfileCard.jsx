@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { MoreHorizontal, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function ProfileCard() {
+  const { user } = useAuth();
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -12,7 +15,7 @@ export default function ProfileCard() {
       <div className="flex justify-between items-start">
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accentAmber/20 to-accentAmber/5 border border-accentAmber/30 flex items-center justify-center overflow-hidden">
-            <span className="text-serif text-2xl font-bold text-accentAmber">CZ</span>
+            <span className="text-serif text-2xl font-bold text-accentAmber">{user?.initials}</span>
           </div>
           <div className="absolute -bottom-1 -right-1">
              <div className="status-dot-amber scale-75 border-4 border-surface" />
@@ -25,10 +28,10 @@ export default function ProfileCard() {
 
       <div className="mt-10">
         <div className="flex items-center gap-2">
-          <h2 className="text-serif text-2xl font-semibold tracking-tight text-white">C. Zanardini</h2>
+          <h2 className="text-serif text-2xl font-semibold tracking-tight text-white">{user?.name}</h2>
           <ShieldCheck size={16} className="text-accentAmber" />
         </div>
-        <p className="text-textMuted text-[11px] uppercase tracking-widest font-bold mt-1">Lead NR-12 Project Engineer</p>
+        <p className="text-textMuted text-[11px] uppercase tracking-widest font-bold mt-1">{user?.role}</p>
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">

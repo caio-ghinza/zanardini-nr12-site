@@ -114,21 +114,12 @@ export default function MachineCard({ machine, onClick }) {
           </div>
         )}
 
-        <div className="mt-auto pt-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <div className="flex -space-x-2">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-surfaceSubtle flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-110 hover:z-10">
-                  <img src={`https://i.pravatar.cc/100?img=${i+10}`} alt="avatar" />
-                </div>
-              ))}
-            </div>
-            <span className="text-[9px] font-bold text-textMuted uppercase tracking-widest">Responsáveis</span>
-          </div>
+        <div className="mt-auto pt-5 flex items-center justify-end">
           <button className="p-2 hover:bg-surfaceSubtle rounded-lg transition-all text-textMuted hover:text-textPrimary active:scale-90">
             <MoreVertical size={18} />
           </button>
         </div>
+
       </div>
     </motion.div>
   );

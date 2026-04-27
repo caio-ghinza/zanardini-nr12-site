@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import { compressImage } from '../utils/imageUtils';
 import { categorizeDocument } from '../services/aiService';
+import { useUI } from '../components/ui/UIContext';
 
 /**
  * Funções auxiliares para numeração DOC #
@@ -20,10 +21,11 @@ const formatDocNumber = (machine, seq) =>
  */
 export function useMachineUpload(selectedMachine, onUploadSuccess) {
   const [uploading, setUploading] = useState(false);
+  const { addToast } = useUI();
 
   async function handleFileUpload(file, type, title = '') {
     if (!file || !selectedMachine || !selectedMachine.id) {
-      alert('Selecione uma máquina válida para anexar arquivos.');
+      addToast('Selecione uma máquina válida para anexar arquivos.', 'error');
       return;
     }
     
@@ -93,13 +95,15 @@ export function useMachineUpload(selectedMachine, onUploadSuccess) {
       if (dbError) throw dbError;
 
       if (type === 'doc') {
-        alert(`Documento salvo como ${docNumber} (${category.toUpperCase()})`);
+        addToast(`Documento salvo: ${docNumber}`, 'success');
+      } else {
+        addToast('Imagem anexada com sucesso!', 'success');
       }
 
       if (onUploadSuccess) onUploadSuccess(selectedMachine.id);
     } catch (err) {
       console.error('Upload Error:', err);
-      alert('Erro no upload: ' + (err.message || 'Erro desconhecido.'));
+      addToast('Erro no upload: ' + (err.message || 'Erro desconhecido.'), 'error');
     } finally {
       setUploading(false);
     }
@@ -107,3 +111,4 @@ export function useMachineUpload(selectedMachine, onUploadSuccess) {
 
   return { uploading, handleFileUpload };
 }
+

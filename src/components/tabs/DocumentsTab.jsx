@@ -13,12 +13,13 @@ import {
   Download
 } from 'lucide-react';
 import { supabase } from '../../supabase';
-import seedData from '../../data/seedData.json';
+import seedData from '../../data/seedData.json';import DocumentUploadModal from '../machinery/DocumentUploadModal';
 
 export default function DocumentsTab() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('all');
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -54,6 +55,8 @@ export default function DocumentsTab() {
 
   return (
     <div className="space-y-8">
+      <DocumentUploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
+      
       {/* HEADER STATS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
@@ -82,13 +85,12 @@ export default function DocumentsTab() {
                   <p className="text-sm text-textMuted mt-1">Gestão centralizada de conformidade e auditoria</p>
                </div>
                <div className="flex gap-3 w-full md:w-auto">
-                 <button className="flex-1 md:flex-none py-2.5 px-6 bg-accentAmber text-white text-[10px] font-bold uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-accentAmber/20 hover:bg-accentAmberHover transition-all">
+                 <button 
+                   onClick={() => setIsUploadOpen(true)}
+                   className="flex-1 md:flex-none py-2.5 px-6 bg-accentAmber text-white text-[10px] font-bold uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-accentAmber/20 hover:bg-accentAmberHover transition-all"
+                 >
                    <FilePlus size={16} />
                    Upload Documento
-                 </button>
-                 <button className="flex-1 md:flex-none py-2.5 px-6 border border-borderBrand text-textPrimary text-[10px] font-bold uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 hover:bg-surfaceSubtle transition-all bg-white">
-                   <Cpu size={16} className="text-accentBlue" />
-                   Sincronizar IA
                  </button>
                </div>
             </div>

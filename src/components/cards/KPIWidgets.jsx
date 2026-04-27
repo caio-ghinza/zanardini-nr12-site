@@ -1,16 +1,19 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, TrendingDown, DollarSign } from 'lucide-react';
+import { useDashboardKPIs } from '../../hooks/useDashboardKPIs';
 
 export default function KPIWidgets() {
+  const { riskyMachines, avoidedFines, remainingCapex, loading } = useDashboardKPIs();
+
   const kpis = [
-    { label: "Máquinas em Risco", value: "8", icon: AlertCircle, color: "text-accentRed" },
-    { label: "Multa Evitada", value: "R$ 450k+", icon: TrendingDown, color: "text-accentAmber" },
-    { label: "CAPEX Restante", value: "R$ 19.780", icon: DollarSign, color: "text-accentAmberDeep" },
+    { label: "Máquinas em Risco", value: riskyMachines, icon: AlertCircle, color: "text-accentRed" },
+    { label: "Multa Evitada", value: avoidedFines, icon: TrendingDown, color: "text-accentAmber" },
+    { label: "CAPEX Restante", value: remainingCapex, icon: DollarSign, color: "text-accentAmberDeep" },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-6 h-full">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
       {kpis.map((kpi, i) => (
         <motion.div
           key={kpi.label}
@@ -24,7 +27,9 @@ export default function KPIWidgets() {
           </div>
           <div>
             <p className="text-[10px] text-textMuted uppercase tracking-widest font-bold">{kpi.label}</p>
-            <h4 className="text-serif text-3xl mt-1 font-semibold text-white">{kpi.value}</h4>
+            <h4 className="text-serif text-2xl lg:text-3xl mt-1 font-semibold text-white">
+              {loading ? '...' : kpi.value}
+            </h4>
           </div>
         </motion.div>
       ))}

@@ -22,7 +22,8 @@ export default function MachineryTab() {
     filteredMachines,
     fetchMachines,
     deleteMachine,
-    updateMachine
+    updateMachine,
+    createMachine
   } = useMachinery();
 
 
@@ -59,11 +60,12 @@ export default function MachineryTab() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <header className="flex flex-col gap-2 text-left">
-        <h2 className="text-3xl font-bold text-textPrimary font-['Sora'] tracking-tight">Inventário de Ativos</h2>
+        <h2 className="text-3xl font-bold text-textPrimary font-['Sora'] tracking-tight">Máquinas</h2>
         <p className="text-sm text-textSecondary max-w-2xl leading-relaxed">
           Gestão centralizada de conformidade NR-12. Monitore o status de adequação, documentos técnicos e auditorias digitais por IA.
         </p>
       </header>
+
 
       <MachineryToolbar 
         search={search}
@@ -80,6 +82,7 @@ export default function MachineryTab() {
         machines={filteredMachines}
         loading={loading}
         onMachineClick={setSelectedMachine}
+        onAddClick={() => setShowAddWizard(true)}
       />
 
       <AnimatePresence>
@@ -106,7 +109,7 @@ export default function MachineryTab() {
       <AddMachineWizard 
         isOpen={showAddWizard}
         onClose={() => setShowAddWizard(false)}
-        onRefresh={fetchMachines}
+        onCreateMachine={createMachine}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../supabase';
-import seedData from '../data/seedData.json';
+import { useUI } from '../components/ui/UIContext';
 
 /**
  * Hook principal para gerenciar o inventário de máquinas e filtros.
@@ -10,6 +10,7 @@ export function useMachinery() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const { addToast } = useUI();
 
   const fetchMachines = useCallback(async () => {
     setLoading(true);
@@ -32,10 +33,10 @@ export function useMachinery() {
         document_gaps: (m.document_gaps || []).filter(g => !g.resolved)
       }));
       
-      setMachines(processed.length > 0 ? processed : seedData.machines);
+      setMachines(processed);
     } catch (err) {
       console.error('Error fetching machines:', err);
-      setMachines(seedData.machines);
+      setMachines([]);
     } finally {
       setLoading(false);
     }
@@ -56,16 +57,16 @@ export function useMachinery() {
     };
   }, [fetchMachines]);
 
-  async function deleteMachine(id) {
-    if (!confirm('Deseja realmente remover esta máquina?')) return false;
+  const deleteMachine = async (id) => {
     try {
       const { error } = await supabase.from('machines').delete().eq('id', id);
       if (error) throw error;
       fetchMachines();
+      addToast('Máquina removida com sucesso.', 'success');
       return true;
     } catch (err) {
       console.error(err);
-      alert('Erro ao excluir registro.');
+      addToast('Erro ao excluir registro.', 'error');
       return false;
     }
   }
@@ -79,13 +80,33 @@ export function useMachinery() {
 
       if (error) throw error;
       fetchMachines();
+      addToast('Máquina atualizada!', 'success');
       return true;
     } catch (err) {
       console.error('Update error:', err);
-      alert('Erro ao atualizar máquina.');
+      addToast('Erro ao atualizar máquina.', 'error');
       return false;
     }
   }
+
+  async function createMachine(machineData) {
+    try {
+      const { data, error } = await supabase
+        .from('machines')
+        .insert([machineData])
+        .select();
+
+      if (error) throw error;
+      fetchMachines();
+      addToast('Nova máquina cadastrada!', 'success');
+      return { data, error: null };
+    } catch (err) {
+      console.error('Create error:', err);
+      addToast('Erro ao cadastrar máquina.', 'error');
+      return { data: null, error: err };
+    }
+  }
+
 
   const filteredMachines = useMemo(() => {
     return machines.filter(m => {
@@ -106,7 +127,8 @@ export function useMachinery() {
     filteredMachines,
     fetchMachines,
     deleteMachine,
-    updateMachine
+    updateMachine,
+    createMachine
   };
 }
 

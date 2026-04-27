@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, PlusCircle, Cpu } from 'lucide-react';
+import AdminOnly from '../admin/AdminOnly';
 
 export default function MachineryToolbar({ 
   search, 
@@ -43,27 +44,15 @@ export default function MachineryToolbar({
           ))}
         </div>
 
-        {/* BOTÃO IA AUTO-SCAN */}
-        <button 
-          onClick={onAutoScan}
-          disabled={!!batchProgress}
-          className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all border ${
-            batchProgress 
-            ? 'bg-surfaceSubtle text-textMuted border-borderBrand animate-pulse' 
-            : 'bg-white text-accentAmber border-accentAmber/30 hover:bg-accentAmber hover:text-white hover:border-accentAmber'
-          }`}
-        >
-          <Cpu size={18} className={batchProgress ? 'animate-spin' : ''} />
-          {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : 'IA Auto-Scan'}
-        </button>
-
-        <button 
-          onClick={onAddMachine}
-          className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-black/80 transition-all shadow-lg shadow-black/10"
-        >
-          <PlusCircle size={18} />
-          Nova Máquina
-        </button>
+        <AdminOnly>
+          <button 
+            onClick={onAddMachine}
+            className="flex items-center gap-3 px-8 py-4 bg-black text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-black/80 transition-all shadow-lg shadow-black/10"
+          >
+            <PlusCircle size={18} />
+            Nova Máquina
+          </button>
+        </AdminOnly>
       </div>
     </div>
   );
