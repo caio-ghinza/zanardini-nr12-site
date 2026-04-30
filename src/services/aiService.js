@@ -1,30 +1,32 @@
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL_PRIMARY = "gemini-2.5-flash";
-const MODEL_FALLBACK = "gemini-1.5-pro";
+const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const MODEL_PRIMARY = "llama-3.3-70b-versatile";
+const MODEL_FALLBACK = "llama-3.1-8b-instant";
 
 /**
- * Realiza análise técnica de documentos NR-12 usando Gemini AI.
+ * Realiza análise técnica de documentos NR-12 usando Groq API.
  */
 export async function analyzeNR12Document(title, fileUrl) {
   if (!API_KEY) {
-    throw new Error("VITE_GEMINI_API_KEY não configurada.");
+    throw new Error("VITE_GROQ_API_KEY não configurada.");
   }
 
   const prompt = `
-    Você é um auditor sênior de segurança do trabalho especializado na norma brasileira NR-12.
-    Analise o documento técnico abaixo e forneça um parecer profissional.
+    Você é um Auditor Documental Técnico especialista em Engenharia e Segurança do Trabalho (NR-12). 
+    Sua função é analisar o documento técnico fornecido e extrair fatos baseados EXCLUSIVAMENTE no texto.
+
+    REGRAS ESTRITAS DE SOBREVIVÊNCIA:
+    1. ZERO ALUCINAÇÃO: É proibido inventar informações. Se não estiver no texto, use "Não informado no documento".
+    2. FILTRO DE CONTEXTO: Se o documento não for relacionado a máquinas, diagramas ou engenharia NR-12, defina "is_relevant": false.
+    3. FORMATO DE SAÍDA: Responda APENAS em JSON estrito.
 
     DOCUMENTO: "${title}"
     URL: ${fileUrl}
 
-    REGRAS DE RESPOSTA:
-    1. Forneça o resultado estritamente em JSON.
-    2. Use linguagem técnica e formal, mas evite caixa alta (All Caps) desnecessária.
-    3. O resumo executivo deve ser conciso e focado em riscos.
-
-    FORMATO JSON ESPERADO:
+    ESTRUTURA JSON OBRIGATÓRIA:
     {
-      "executive_summary": "string",
+      "is_relevant": boolean,
+      "classification": "A | B | C | D | E",
+      "executive_summary": "Texto formatado contendo: Classificação, Resumo Executivo (1 parágrafo) e Análise Específica detalhada seguindo o protocolo de campos para a categoria selecionada (A, B, C, D ou E). Use Markdown para negritos e quebras de linha.",
       "usage_priority": "altissima" | "alta" | "media" | "baixa",
       "critical_alerts": [
         {
@@ -35,46 +37,54 @@ export async function analyzeNR12Document(title, fileUrl) {
         }
       ],
       "missing_documents": [
-        {
-          "title": "string",
-          "reason": "Por que este documento é necessário para conformidade NR-12",
-          "nr12_reference": "string or null"
-        }
-      ],
-      "model_used": "string"
+        { "title": "Nome do documento ausente (ex: Diagrama Lógico)" }
+      ]
     }
+
+    CRITÉRIOS DE PRIORIDADE:
+    - altissima: Riscos iminentes, falta de dispositivos de parada de emergência ou proteção física.
+    - alta: Falhas graves em diagramas elétricos/hidráulicos ou falta de redundância (duplo canal).
+    - media: Documentação técnica incompleta ou manuais desatualizados.
+    - baixa: Documentos informativos, certificados ou ARTs de conformidade.
+
+    CATEGORIAS DE CLASSIFICAÇÃO:
+    [A] Diagrama Elétrico (As-Built)
+    [B] Diagrama Hidráulico e Pneumático
+    [C] Manual de Operação e Instalação
+    [D] Manual de Manutenção
+    [E] Outro / Documento Técnico Genérico
   `;
 
   try {
-    return await callGeminiAPI(prompt, MODEL_PRIMARY);
+    return await callGroqAPI(prompt, MODEL_PRIMARY);
   } catch (error) {
-    console.warn("Falha no modelo Flash, tentando fallback para Pro...", error);
-    return await callGeminiAPI(prompt, MODEL_FALLBACK);
+    console.warn("Falha no modelo principal, tentando fallback...", error);
+    return await callGroqAPI(prompt, MODEL_FALLBACK);
   }
 }
 
-async function callGeminiAPI(prompt, model) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          response_mime_type: "application/json",
-        },
-      }),
-    }
-  );
+async function callGroqAPI(prompt, model) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    })
+  });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error?.message || "Erro na API Gemini");
+    throw new Error(errorData.error?.message || "Erro na API Groq");
   }
 
   const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data.choices?.[0]?.message?.content;
   const result = JSON.parse(text);
   
   return { ...result, model_used: model };
@@ -96,7 +106,7 @@ export async function categorizeDocument(title) {
   `;
 
   try {
-    const res = await callGeminiAPI(prompt, MODEL_PRIMARY);
+    const res = await callGroqAPI(prompt, MODEL_PRIMARY);
     return res.category?.toLowerCase() || 'laudo';
   } catch {
     return 'laudo';

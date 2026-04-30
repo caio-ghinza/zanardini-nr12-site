@@ -71,6 +71,13 @@ export default function RoadmapTab() {
   const weekTasks = tasks.filter(t => t.week_number === selectedWeek);
   const isWeekCompleted = weekTasks.length > 0 && weekTasks.every(t => t.status === 'concluido');
   const inProgress = weekTasks.some(t => t.status === 'concluido') && !isWeekCompleted;
+  const normalizePriority = (priority) => {
+    const p = (priority || '').toLowerCase();
+    if (p.includes('crit')) return 'Critica';
+    if (p.includes('alta')) return 'Alta';
+    if (p.includes('baix')) return 'Baixa';
+    return 'Media';
+  };
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in duration-500">
@@ -217,10 +224,10 @@ export default function RoadmapTab() {
                           <div className="h-3 w-px bg-borderBrand" />
                           
                           <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                            task.priority === 'Critica' ? 'bg-accentRedLight text-accentRed' :
-                            task.priority === 'Alta' ? 'bg-accentAmberLight text-accentAmber' :
+                            normalizePriority(task.priority) === 'Critica' ? 'bg-accentRedLight text-accentRed' :
+                            normalizePriority(task.priority) === 'Alta' ? 'bg-accentAmberLight text-accentAmber' :
                             'bg-surfaceSubtle text-textMuted'
-                          }`}>Prioridade {task.priority}</span>
+                          }`}>Prioridade {normalizePriority(task.priority)}</span>
                         </div>
                      </div>
                    </div>

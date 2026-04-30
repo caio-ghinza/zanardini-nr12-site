@@ -39,6 +39,8 @@ export default function MachineryTab() {
     setAsCover,
     runAIAnalysis,
     runAutoScan,
+    deleteDocument,
+    updateVerifications,
     analyzingDocId,
     batchProgress
   } = useMachineExtraData(selectedMachine, fetchMachines);
@@ -101,6 +103,8 @@ export default function MachineryTab() {
             analyzingDocId={analyzingDocId}
             onDeleteMachine={handleDelete}
             onUpdateMachine={updateMachine}
+            deleteDocument={deleteDocument}
+            updateVerifications={updateVerifications}
           />
 
         )}

@@ -3,11 +3,8 @@ import { supabase } from '../supabase';
 import { analyzeNR12Document } from '../services/aiService';
 import { useUI } from '../components/ui/UIContext';
 
-/**
- * Hook para gerenciar dados secundários de uma máquina (Docs, Ações, Imagens).
- */
 export function useMachineExtraData(selectedMachine, onRefreshMachines) {
-  const [extraData, setExtraData] = useState({ documents: [], parts: [], images: [], gaps: [] });
+  const [extraData, setExtraData] = useState({ documents: [], parts: [], images: [], gaps: [], verifications: {} });
   const [analyzingDocId, setAnalyzingDocId] = useState(null);
   const [batchProgress, setBatchProgress] = useState(null);
   const { addToast } = useUI();
@@ -15,38 +12,34 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
   const fetchExtraData = useCallback(async (machineId) => {
     if (!machineId) return;
     try {
-      const [docs, parts, imgs, gaps] = await Promise.all([
+      const [docs, parts, imgs, gaps, machineInfo] = await Promise.all([
         supabase.from('machine_documents').select('*').eq('machine_id', machineId).order('created_at', { ascending: false }),
         supabase.from('machine_parts').select('*').eq('machine_id', machineId).order('created_at', { ascending: true }),
         supabase.from('machine_images').select('*').eq('machine_id', machineId).order('created_at', { ascending: false }),
-        supabase.from('document_gaps').select('*').eq('machine_id', machineId).eq('resolved', false).order('severity', { ascending: false })
+        supabase.from('document_gaps').select('*').eq('machine_id', machineId).eq('resolved', false).order('severity', { ascending: false }),
+        supabase.from('machines').select('technical_verifications').eq('id', machineId).single()
       ]);
       setExtraData({
         documents: docs.data || [],
         parts: parts.data || [],
         images: imgs.data || [],
-        gaps: gaps.data || []
+        gaps: gaps.data || [],
+        verifications: machineInfo.data?.technical_verifications || {}
       });
     } catch (err) {
       console.error('Error fetching extra data:', err);
     }
   }, []);
 
-  /**
-   * Determina a severidade do gap baseado no título (Regras do Bloco 4)
-   */
   function inferSeverity(title) {
+    if (!title) return 'medio';
     const t = title.toLowerCase();
     if (t.includes('elétrico') || t.includes('hardwiring') || t.includes('apr') || t.includes('loto')) return 'critico';
     if (t.includes('hidráulico') || t.includes('pneumático') || t.includes('proteção')) return 'alto';
     return 'medio';
   }
 
-  /**
-   * Insere um gap com deduplicação
-   */
   async function createGapIfMissing(machineId, machineName, gapTitle, source = 'ia') {
-    // 1. Verifica se já existe
     const { data: existing } = await supabase
       .from('document_gaps')
       .select('id')
@@ -57,7 +50,6 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
 
     if (existing && existing.length > 0) return;
 
-    // 2. Insere
     await supabase.from('document_gaps').insert([{
       machine_id: machineId,
       machine_name: machineName,
@@ -68,20 +60,11 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
     }]);
   }
 
-  /**
-   * Executa análise individual ou como parte de um lote
-   */
   async function runAIAnalysis(doc, machineName) {
     if (!doc || !doc.id) return;
     setAnalyzingDocId(doc.id);
-    
-    // Feedback opcional no console para debug
-    console.log(`Iniciando análise técnica via Gemini para: ${doc.title}`);
-    
     try {
       const result = await analyzeNR12Document(doc.title, doc.file_url);
-      
-      // Atualiza o documento no banco de dados
       const { error } = await supabase
         .from('machine_documents')
         .update({ 
@@ -94,18 +77,15 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
       
       if (error) throw error;
 
-      // Gera os gaps automáticos com lógica de deduplicação aprimorada
       if (result.missing_documents && result.missing_documents.length > 0) {
-        const gapPromises = result.missing_documents.map(gap => 
-          createGapIfMissing(doc.machine_id, machineName || 'Máquina', gap.title, 'ia')
-        );
+        const gapPromises = result.missing_documents
+          .filter(gap => gap && gap.title)
+          .map(gap => createGapIfMissing(doc.machine_id, machineName || 'Máquina', gap.title, 'ia'));
         await Promise.all(gapPromises);
       }
 
-      // Atualiza o estado local para refletir as mudanças imediatamente
       await fetchExtraData(doc.machine_id);
       addToast(`Análise concluída: ${doc.title}`, 'success');
-      
       return result;
     } catch (err) {
       console.error('Falha na análise de IA:', err);
@@ -116,42 +96,84 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
     }
   }
 
-  /**
-   * FASE 1: ANÁLISE BATCH (Auto-Scan)
-   */
-  async function runAutoScan() {
-    // 1. Buscar docs pendentes
-    const { data: pendingDocs } = await supabase
-      .from('machine_documents')
-      .select('*, machines(name)')
-      .is('ai_analyzed_at', null);
+  async function updateVerifications(newVerifications) {
+    if (!selectedMachine?.id) return false;
+    
+    // Backup para rollback em caso de erro
+    const previousVerifications = extraData.verifications;
+    
+    // Atualização Otimista (Interface responde instantaneamente)
+    setExtraData(prev => ({ ...prev, verifications: newVerifications }));
 
-    if (!pendingDocs || pendingDocs.length === 0) {
-      addToast('Nenhum documento pendente de análise.', 'info');
-      return;
-    }
-
-    setBatchProgress({ current: 0, total: pendingDocs.length, status: 'Iniciando...' });
-
-    for (let i = 0; i < pendingDocs.length; i++) {
-      const doc = pendingDocs[i];
-      setBatchProgress({ 
-        current: i + 1, 
-        total: pendingDocs.length, 
-        status: `Analisando ${doc.doc_number || doc.title}...` 
-      });
+    try {
+      const { error } = await supabase
+        .from('machines')
+        .update({ technical_verifications: newVerifications })
+        .eq('id', selectedMachine.id);
       
-      try {
-        await runAIAnalysis(doc, doc.machines?.name);
-      } catch (e) {
-        console.error(`Erro ao analisar doc ${doc.id}`, e);
-      }
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Error updating verifications:', err);
+      // Reverte para o estado anterior em caso de falha
+      setExtraData(prev => ({ ...prev, verifications: previousVerifications }));
+      addToast('Não foi possível salvar as verificações. Sincronização falhou.', 'error');
+      return false;
     }
-
-    setBatchProgress(null);
-    addToast('Análise em lote concluída!', 'success');
   }
 
+  async function addMachineAction(partName) {
+    if (!selectedMachine?.id) return false;
+    const sanitizedName = (partName || '').trim();
+    if (!sanitizedName) return false;
+
+    try {
+      const { error } = await supabase.from('machine_parts').insert([{
+        machine_id: selectedMachine.id,
+        part_name: sanitizedName,
+        status: 'pendente'
+      }]);
+      if (error) throw error;
+      await fetchExtraData(selectedMachine.id);
+      addToast('Ação técnica adicionada.', 'success');
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
+  async function togglePartStatus(part) {
+    if (!selectedMachine?.id || !part?.id) return false;
+    const nextStatus = part.status === 'instalado' ? 'pendente' : 'instalado';
+    try {
+      const { error } = await supabase.from('machine_parts').update({ status: nextStatus }).eq('id', part.id);
+      if (error) throw error;
+      await fetchExtraData(selectedMachine.id);
+      return true;
+    } catch (err) { return false; }
+  }
+
+  async function deletePart(partId) {
+    if (!selectedMachine?.id || !partId) return false;
+    try {
+      const { error } = await supabase.from('machine_parts').delete().eq('id', partId);
+      if (error) throw error;
+      await fetchExtraData(selectedMachine.id);
+      return true;
+    } catch (err) { return false; }
+  }
+
+  async function deleteDocument(docId) {
+    if (!selectedMachine?.id || !docId) return false;
+    try {
+      const { error } = await supabase.from('machine_documents').delete().eq('id', docId);
+      if (error) throw error;
+      await fetchExtraData(selectedMachine.id);
+      addToast('Documento removido.', 'success');
+      return true;
+    } catch (err) { return false; }
+  }
 
   async function setAsCover(url) {
     if (!selectedMachine) return;
@@ -160,16 +182,24 @@ export function useMachineExtraData(selectedMachine, onRefreshMachines) {
       if (error) throw error;
       onRefreshMachines();
       return true;
-    } catch (err) { console.error(err); return false; }
+    } catch (err) { return false; }
+  }
+
+  async function runAutoScan() {
+    const { data: pendingDocs } = await supabase.from('machine_documents').select('*, machines(name)').is('ai_analyzed_at', null);
+    if (!pendingDocs || pendingDocs.length === 0) return;
+    setBatchProgress({ current: 0, total: pendingDocs.length, status: 'Iniciando...' });
+    for (let i = 0; i < pendingDocs.length; i++) {
+      setBatchProgress({ current: i + 1, total: pendingDocs.length, status: `Analisando ${pendingDocs[i].title}...` });
+      try { await runAIAnalysis(pendingDocs[i], pendingDocs[i].machines?.name); } catch (e) {}
+    }
+    setBatchProgress(null);
+    addToast('Análise em lote concluída!', 'success');
   }
 
   return { 
-    extraData, 
-    fetchExtraData, 
-    setAsCover, 
-    runAIAnalysis, 
-    runAutoScan,
-    analyzingDocId,
-    batchProgress 
+    extraData, fetchExtraData, addMachineAction, togglePartStatus, deletePart,
+    setAsCover, runAIAnalysis, runAutoScan, deleteDocument, updateVerifications,
+    analyzingDocId, batchProgress 
   };
 }

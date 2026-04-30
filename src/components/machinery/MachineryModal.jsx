@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ShieldCheck, X } from 'lucide-react';
 import { getRiskBadgeColor } from '../../utils/machineryConstants';
@@ -9,6 +10,7 @@ import DetailsTab from './tabs/DetailsTab';
 import DossierTab from './tabs/DossierTab';
 import ActionsTab from './tabs/ActionsTab';
 import GalleryTab from './tabs/GalleryTab';
+import VerificationsTab from './tabs/VerificationsTab';
 
 import { generateMachineReport } from '../../services/reportService';
 
@@ -22,10 +24,12 @@ export default function MachineryModal({
   togglePartStatus,
   deletePart,
   setAsCover,
-  runAIAnalysis,
   analyzingDocId,
   onDeleteMachine,
-  onUpdateMachine
+  onUpdateMachine,
+  deleteDocument,
+  updateVerifications,
+  runAIAnalysis
 }) {
   const [modalTab, setModalTab] = useState('details');
   const [isPdfOpen, setIsPdfOpen] = useState(null);
@@ -41,24 +45,24 @@ export default function MachineryModal({
     onDeleteMachine(machine.id);
   };
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-0 md:p-6 bg-background/80 backdrop-blur-md">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-white w-full max-w-5xl h-[85vh] overflow-hidden rounded-2xl border border-borderBrand shadow-2xl flex flex-col relative"
+          className="bg-white w-full h-full md:h-[85vh] md:max-w-5xl overflow-hidden md:rounded-2xl border-x md:border border-borderBrand shadow-2xl flex flex-col relative pt-safe-area pb-safe-area"
         >
           {/* HEADER */}
-          <div className="p-6 border-b border-borderBrand flex justify-between items-center bg-surfaceSubtle">
-            <div className="flex items-center gap-4">
+          <div className="p-4 md:p-6 border-b border-borderBrand flex justify-between items-center bg-surfaceSubtle">
+            <div className="flex items-center gap-3 md:gap-4">
               <div className={`p-2 rounded-lg ${getRiskBadgeColor(machine.risk_level)}`}>
-                <ShieldCheck size={20} />
+                <ShieldCheck size={18} className="md:w-5 md:h-5" />
               </div>
               <div className="text-left">
-                <h3 className="text-xl font-bold text-textPrimary leading-none mb-1">{machine.name}</h3>
-                <p className="text-[10px] text-textMuted uppercase font-bold tracking-widest">{machine.model} • Central de Matrizes</p>
+                <h3 className="text-lg md:text-xl font-bold text-textPrimary leading-none mb-1">{machine.name}</h3>
+                <p className="text-[9px] md:text-[10px] text-textMuted uppercase font-bold tracking-widest leading-tight">{machine.model} • Central de Matrizes</p>
               </div>
             </div>
             <button 
@@ -70,17 +74,18 @@ export default function MachineryModal({
           </div>
 
           {/* INTERNAL NAV */}
-          <div className="bg-surfaceSubtle/50 px-8 border-b border-borderBrand flex gap-8">
+          <div className="bg-surfaceSubtle/50 px-4 md:px-8 border-b border-borderBrand flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide">
             {[
               { id: 'details', label: 'Resumo' },
-              { id: 'docs', label: 'Dossiê' },
+              { id: 'verifications', label: 'Verificações' },
               { id: 'actions', label: 'Ações' },
+              { id: 'docs', label: 'Dossiê' },
               { id: 'images', label: 'Galeria' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setModalTab(tab.id)}
-                className={`py-4 px-1 text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative ${modalTab === tab.id ? 'text-accentAmber border-b-2 border-accentAmber' : 'text-textMuted hover:text-textPrimary'}`}
+                className={`py-4 px-1 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] md:tracking-[0.2em] transition-all relative whitespace-nowrap ${modalTab === tab.id ? 'text-accentAmber border-b-2 border-accentAmber' : 'text-textMuted hover:text-textPrimary'}`}
               >
                 {tab.label}
               </button>
@@ -88,8 +93,14 @@ export default function MachineryModal({
           </div>
 
           {/* TAB CONTENT */}
-          <div className="flex-1 overflow-y-auto p-8 relative">
-            {modalTab === 'details' && <DetailsTab selectedMachine={machine} onUpdate={onUpdateMachine} />}
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+            {modalTab === 'details' && (
+              <DetailsTab 
+                selectedMachine={machine} 
+                onUpdate={onUpdateMachine} 
+                extraData={extraData}
+              />
+            )}
 
             
             {modalTab === 'docs' && (
@@ -99,7 +110,15 @@ export default function MachineryModal({
                 handleFileUpload={handleFileUpload}
                 setIsPdfOpen={setIsPdfOpen}
                 analyzingDocId={analyzingDocId}
-                runAIAnalysis={(doc) => runAIAnalysis(doc, machine.name)}
+                runAIAnalysis={runAIAnalysis ? (doc) => runAIAnalysis(doc, machine.name) : undefined}
+                deleteDocument={deleteDocument}
+              />
+            )}
+
+            {modalTab === 'verifications' && (
+              <VerificationsTab 
+                verifications={extraData.verifications}
+                onUpdate={updateVerifications}
               />
             )}
 
@@ -193,7 +212,8 @@ export default function MachineryModal({
         confirmLabel="Excluir Permanentemente"
         isDestructive={true}
       />
-    </>
+    </>,
+    document.body
   );
 }
 

@@ -5,7 +5,7 @@ import { supabase } from '../../supabase';
 import { useMachineUpload } from '../../hooks/useMachineUpload';
 import { useUI } from '../ui/UIContext';
 
-export default function DocumentUploadModal({ isOpen, onClose }) {
+export default function DocumentUploadModal({ isOpen, onClose, onUploadSuccess }) {
   const [machines, setMachines] = useState([]);
   const [selectedMachineId, setSelectedMachineId] = useState('');
   const [file, setFile] = useState(null);
@@ -19,6 +19,7 @@ export default function DocumentUploadModal({ isOpen, onClose }) {
     // Success
     setFile(null);
     setTitle('');
+    if (onUploadSuccess) onUploadSuccess();
     onClose();
   });
 
@@ -55,7 +56,7 @@ export default function DocumentUploadModal({ isOpen, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4">
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
@@ -68,25 +69,25 @@ export default function DocumentUploadModal({ isOpen, onClose }) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl border border-borderBrand/60 overflow-hidden"
+          className="relative w-full h-full md:h-auto md:max-w-lg bg-white md:rounded-2xl shadow-xl border-x md:border border-borderBrand/60 overflow-hidden flex flex-col"
         >
-          <div className="p-6 border-b border-borderBrand flex justify-between items-center bg-surfaceSubtle/20">
+          <div className="p-4 md:p-6 border-b border-borderBrand flex justify-between items-center bg-surfaceSubtle/20">
             <div>
-              <h2 className="text-xl font-bold font-sora text-textPrimary">Upload de Documento</h2>
-              <p className="text-[11px] text-textMuted uppercase font-bold tracking-widest mt-1">Anexe PDFs ou manuais técnicos</p>
+              <h2 className="text-lg md:text-xl font-bold font-sora text-textPrimary">Upload de Documento</h2>
+              <p className="text-[10px] md:text-[11px] text-textMuted uppercase font-bold tracking-widest mt-1">Anexe fotos, PDFs ou manuais</p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-surfaceSubtle rounded-xl transition-colors">
               <X size={20} className="text-textMuted" />
             </button>
           </div>
 
-          <form onSubmit={onSubmit} className="p-6 space-y-6">
+          <form onSubmit={onSubmit} className="p-4 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Máquina Vinculada</label>
               <select 
                 value={selectedMachineId} 
                 onChange={(e) => setSelectedMachineId(e.target.value)}
-                className="w-full bg-white border border-borderBrand rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accentAmber/20 focus:border-accentAmber"
+                className="w-full bg-white border border-borderBrand rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accentAmber/20 focus:border-accentAmber appearance-none"
                 disabled={uploading || isFetching}
               >
                 <option value="">Selecione um ativo...</option>
@@ -97,23 +98,23 @@ export default function DocumentUploadModal({ isOpen, onClose }) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Título do Documento (Opcional)</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Título (Opcional)</label>
               <input 
                 type="text" 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Manual de Manutenção"
+                placeholder="Ex: Foto da Placa de Identificação"
                 className="w-full bg-white border border-borderBrand rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accentAmber/20 focus:border-accentAmber"
                 disabled={uploading}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Arquivo</label>
-              <div className="border-2 border-dashed border-borderBrand rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-accentAmber/50 hover:bg-accentAmber/5 transition-colors group relative cursor-pointer">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Arquivo ou Foto</label>
+              <div className="border-2 border-dashed border-borderBrand rounded-xl p-6 md:p-8 flex flex-col items-center justify-center text-center hover:border-accentAmber/50 hover:bg-accentAmber/5 transition-colors group relative cursor-pointer min-h-[160px]">
                 <input 
                   type="file" 
-                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                   onChange={(e) => setFile(e.target.files[0])}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={uploading}
@@ -121,19 +122,19 @@ export default function DocumentUploadModal({ isOpen, onClose }) {
                 
                 {file ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-12 h-12 rounded-full bg-accentAmber/10 flex items-center justify-center text-accentAmber">
-                      <File size={24} />
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accentAmber/10 flex items-center justify-center text-accentAmber">
+                      <File size={20} className="md:w-6 md:h-6" />
                     </div>
-                    <p className="text-sm font-bold text-textPrimary">{file.name}</p>
+                    <p className="text-sm font-bold text-textPrimary truncate max-w-[200px]">{file.name}</p>
                     <p className="text-[10px] font-mono text-textMuted">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-full bg-surfaceSubtle flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Upload size={20} className="text-textSecondary group-hover:text-accentAmber" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-surfaceSubtle flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Upload size={18} className="md:w-5 md:h-5 text-textSecondary group-hover:text-accentAmber" />
                     </div>
-                    <p className="text-sm font-bold text-textPrimary">Clique ou arraste um arquivo</p>
-                    <p className="text-xs text-textMuted mt-1">PDF, DOC, XLS (máx. 50MB)</p>
+                    <p className="text-sm font-bold text-textPrimary leading-tight">Toque para tirar foto<br/><span className="text-[10px] text-textMuted font-normal">ou selecionar arquivo</span></p>
+                    <p className="text-[10px] text-textMuted mt-2 uppercase tracking-tight">PDF, JPG, PNG (máx. 50MB)</p>
                   </>
                 )}
               </div>

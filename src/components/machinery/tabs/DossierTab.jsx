@@ -1,6 +1,8 @@
 import React from 'react';
-import { FileText, Eye, Zap, BrainCircuit, CheckCircle } from 'lucide-react';
+import { FileText, Eye, Zap, BrainCircuit, CheckCircle, Trash2 } from 'lucide-react';
 import AIAnalysisCard from '../AIAnalysisCard';
+import ConfirmModal from '../../ui/ConfirmModal';
+import { useAuthContext } from '../../../hooks/useAuthContext';
 
 export default function DossierTab({ 
   extraData, 
@@ -8,31 +10,45 @@ export default function DossierTab({
   handleFileUpload, 
   setIsPdfOpen, 
   analyzingDocId, 
-  runAIAnalysis 
+  runAIAnalysis,
+  deleteDocument
 }) {
+  const { profile } = useAuthContext();
+  const isAdmin = profile?.role === 'admin';
+  const [docToDelete, setDocToDelete] = React.useState(null);
+
+  const handleDeleteConfirm = () => {
+    if (docToDelete) {
+      deleteDocument(docToDelete.id);
+      setDocToDelete(null);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-4 text-left">
-      <div className="p-6 bg-surfaceSubtle rounded-2xl border border-borderBrand flex flex-col gap-4">
-         <p className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Upload de Novo Documento</p>
-         <div className="flex gap-4">
-           <input id="docTitle" type="text" placeholder="Título do documento..." className="flex-1 p-3 rounded-xl border border-borderBrand outline-none text-xs font-bold" />
-           <label className={`px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all ${uploading ? 'bg-textMuted' : 'bg-textPrimary hover:bg-accentAmber'} text-white`}>
-              <FileText size={18} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">{uploading ? 'Enviando...' : 'Selecionar PDF'}</span>
-              <input 
-                type="file" 
-                className="hidden" 
-                accept=".pdf"
-                disabled={uploading}
-                onChange={(e) => {
-                  const titleInput = document.getElementById('docTitle');
-                  handleFileUpload(e.target.files[0], 'doc', titleInput.value);
-                  titleInput.value = '';
-                }}
-              />
-           </label>
-         </div>
-      </div>
+      {isAdmin && (
+        <div className="p-6 bg-surfaceSubtle rounded-2xl border border-borderBrand flex flex-col gap-4">
+           <p className="text-[10px] font-bold uppercase tracking-widest text-textMuted">Upload de Novo Documento</p>
+           <div className="flex gap-4">
+             <input id="docTitle" type="text" placeholder="Título do documento..." className="flex-1 p-3 rounded-xl border border-borderBrand outline-none text-xs font-bold" />
+             <label className={`px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all ${uploading ? 'bg-textMuted' : 'bg-textPrimary hover:bg-accentAmber'} text-white`}>
+                <FileText size={18} />
+                <span className="text-[10px] font-bold uppercase tracking-widest">{uploading ? 'Enviando...' : 'Selecionar PDF'}</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".pdf"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const titleInput = document.getElementById('docTitle');
+                    handleFileUpload(e.target.files[0], 'doc', titleInput.value);
+                    titleInput.value = '';
+                  }}
+                />
+             </label>
+           </div>
+        </div>
+      )}
 
       {extraData.documents.map((d, i) => (
         <div 
@@ -59,14 +75,28 @@ export default function DossierTab({
                  >
                     <Eye size={20} />
                  </button>
-                 <button 
-                   disabled={analyzingDocId === d.id}
-                   title={d.ai_analyzed_at ? "Reanalisar com IA" : "Analisar com IA"}
-                   onClick={(e) => { e.stopPropagation(); runAIAnalysis(d); }}
-                   className={`p-2.5 opacity-0 group-hover:opacity-100 transition-all rounded-xl border border-borderBrand flex items-center gap-2 ${analyzingDocId === d.id ? 'bg-surfaceSubtle animate-pulse' : (d.ai_analyzed_at ? 'bg-accentGreenLight text-accentGreen' : 'hover:bg-accentAmberLight text-accentAmber')}`}
-                 >
-                    {analyzingDocId === d.id ? <Zap size={18} className="animate-spin" /> : (d.ai_analyzed_at ? <CheckCircle size={18} /> : <BrainCircuit size={18} />)}
-                 </button>
+                 {isAdmin && (
+                   <>
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setDocToDelete(d);
+                      }}
+                      title="Excluir Documento"
+                      className="p-2.5 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded-xl text-red-500 border border-red-100"
+                    >
+                       <Trash2 size={20} />
+                    </button>
+                    <button 
+                      disabled={analyzingDocId === d.id}
+                      title={d.ai_analyzed_at ? "Reanalisar com IA" : "Analisar com IA"}
+                      onClick={(e) => { e.stopPropagation(); runAIAnalysis(d); }}
+                      className={`p-2.5 opacity-0 group-hover:opacity-100 transition-all rounded-xl border border-borderBrand flex items-center gap-2 ${analyzingDocId === d.id ? 'bg-surfaceSubtle animate-pulse' : (d.ai_analyzed_at ? 'bg-accentGreenLight text-accentGreen' : 'hover:bg-accentAmberLight text-accentAmber')}`}
+                    >
+                       {analyzingDocId === d.id ? <Zap size={18} className="animate-spin" /> : (d.ai_analyzed_at ? <CheckCircle size={18} /> : <BrainCircuit size={18} />)}
+                    </button>
+                   </>
+                 )}
               </div>
            </div>
 
@@ -80,6 +110,16 @@ export default function DossierTab({
           <p className="text-sm font-bold uppercase tracking-widest">Nenhum documento anexado ao dossiê</p>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={!!docToDelete}
+        onClose={() => setDocToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        title="EXCLUIR DOCUMENTO"
+        message={`Deseja realmente remover o documento "${docToDelete?.title}"? Esta ação não poderá ser desfeita.`}
+        confirmLabel="Confirmar Exclusão"
+        isDestructive={true}
+      />
     </div>
   );
 }

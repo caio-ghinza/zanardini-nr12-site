@@ -147,7 +147,7 @@ export default function LoginScreen() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-white/50 border border-borderBrand/80 rounded-xl pl-12 pr-4 py-4 text-sm text-textPrimary focus:outline-none focus:ring-4 focus:ring-accentAmber/10 focus:border-accentAmber transition-all placeholder:text-textMuted/50"
-                    placeholder="operador@zanardini.com"
+                    placeholder="seu@email.com"
                     disabled={loading}
                   />
                 </div>

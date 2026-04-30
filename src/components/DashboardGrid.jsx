@@ -6,8 +6,7 @@ import ClockCard from './cards/ClockCard';
 import CalendarCard from './cards/CalendarCard';
 import AgendaList from './cards/AgendaList';
 import InboxList from './cards/InboxList';
-import NowPlayingCard from './cards/NowPlayingCard';
-import LocationMapCard from './cards/LocationMapCard';
+import KPIWidgets from './cards/KPIWidgets';
 
 export default function DashboardGrid() {
   return (
@@ -29,17 +28,16 @@ export default function DashboardGrid() {
 
         {/* Content Rows */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
+          <KPIWidgets />
           <CalendarCard />
+        </div>
+
+        <div className="col-span-12 lg:col-span-4 space-y-6">
           <AgendaList />
         </div>
 
         <div className="col-span-12 lg:col-span-4 space-y-6">
           <InboxList />
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <NowPlayingCard />
-          <LocationMapCard />
         </div>
 
       </div>
